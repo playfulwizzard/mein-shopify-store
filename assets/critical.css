@@ -115,3 +115,11 @@ body {
 .shopify-section > .full-width {
   grid-column: 1 / -1;
 }
+
+/* Shared section heading style */
+.section-heading {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 2rem;
+}
