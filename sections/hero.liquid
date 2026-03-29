@@ -1,4 +1,5 @@
 {%- assign overlay_opacity = section.settings.overlay_opacity | divided_by: 100.0 -%}
+{%- assign media_type = section.settings.media_type -%}
 
 {% style %}
   #shopify-section-{{ section.id }} .hero {
@@ -20,8 +21,34 @@
 {% endstyle %}
 
 <div class="hero full-width">
-  {%- if section.settings.image != blank -%}
-    <div class="hero__media">
+
+  {%- comment -%} ── Hintergrundmedium ── {%- endcomment -%}
+  <div class="hero__media">
+    {%- if media_type == 'video' and section.settings.video != blank -%}
+      {{- section.settings.video
+        | video_tag:
+          autoplay: true,
+          loop: true,
+          muted: true,
+          controls: false,
+          class: 'hero__video'
+      -}}
+
+    {%- elsif media_type == 'youtube' and section.settings.video_url != blank -%}
+      {%- assign yt_id = section.settings.video_url.id -%}
+      <div class="hero__youtube-wrapper" aria-hidden="true">
+        <iframe
+          class="hero__youtube"
+          src="https://www.youtube-nocookie.com/embed/{{ yt_id }}?autoplay=1&mute=1&loop=1&playlist={{ yt_id }}&controls=0&showinfo=0&rel=0&playsinline=1&enablejsapi=1"
+          frameborder="0"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          loading="lazy"
+          title="{{ section.settings.heading | escape }}"
+        ></iframe>
+      </div>
+
+    {%- elsif section.settings.image != blank -%}
       {{- section.settings.image
         | image_url: width: 2000
         | image_tag:
@@ -30,15 +57,17 @@
           class: 'hero__image',
           alt: section.settings.image.alt | default: section.settings.heading | escape
       -}}
-    </div>
-  {%- endif -%}
+    {%- endif -%}
+  </div>
 
+  {%- comment -%} ── Farbüberlagerung ── {%- endcomment -%}
   <div
     class="hero__overlay"
     style="background-color: {{ section.settings.overlay_color }}; opacity: {{ overlay_opacity }};"
     aria-hidden="true"
   ></div>
 
+  {%- comment -%} ── Textinhalt ── {%- endcomment -%}
   <div class="hero__content">
     {%- if section.settings.heading != blank -%}
       <h1 class="hero__heading">{{ section.settings.heading | escape }}</h1>
@@ -52,6 +81,7 @@
       </a>
     {%- endif -%}
   </div>
+
 </div>
 
 {% stylesheet %}
@@ -62,25 +92,49 @@
     overflow: hidden;
   }
 
+  /* ── Hintergrundmedium ── */
   .hero__media {
     position: absolute;
     inset: 0;
     z-index: 0;
   }
 
-  .hero__image {
+  .hero__image,
+  .hero__video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     object-position: center;
+    display: block;
   }
 
+  /* YouTube Background */
+  .hero__youtube-wrapper {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  .hero__youtube {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* Mindestgröße: 16:9 → immer größer als der Container */
+    width: max(100%, calc(100vh * 16 / 9));
+    height: max(100%, calc(100vw * 9 / 16));
+    transform: translate(-50%, -50%);
+    border: 0;
+  }
+
+  /* ── Overlay ── */
   .hero__overlay {
     position: absolute;
     inset: 0;
     z-index: 1;
   }
 
+  /* ── Textinhalt ── */
   .hero__content {
     grid-column: 2;
     position: relative;
@@ -136,9 +190,38 @@
   "tag": "section",
   "settings": [
     {
+      "type": "header",
+      "content": "Hintergrundmedium"
+    },
+    {
+      "type": "select",
+      "id": "media_type",
+      "label": "Medientyp",
+      "options": [
+        { "value": "image", "label": "Bild" },
+        { "value": "video", "label": "Video (hochgeladen)" },
+        { "value": "youtube", "label": "YouTube" }
+      ],
+      "default": "image"
+    },
+    {
       "type": "image_picker",
       "id": "image",
-      "label": "Hintergrundbild"
+      "label": "Bild",
+      "info": "Wird bei Medientyp \"Bild\" verwendet"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video",
+      "info": "Wird bei Medientyp \"Video (hochgeladen)\" verwendet. Empfohlen: MP4, max. 10 MB, ohne Ton."
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "YouTube-URL",
+      "accept": ["youtube"],
+      "info": "Wird bei Medientyp \"YouTube\" verwendet. Das Video wird automatisch stumm im Hintergrund abgespielt."
     },
     {
       "type": "range",
