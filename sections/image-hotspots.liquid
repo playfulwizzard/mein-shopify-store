@@ -4,6 +4,22 @@
   #shopify-section-{{ section.id }} .hotspots__image-col {
     background-color: {{ section.settings.image_bg }};
   }
+  #shopify-section-{{ section.id }} .hotspots__pin-dot {
+    background-color: {{ section.settings.pin_inactive_bg }};
+    color: {{ section.settings.pin_inactive_color }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__pin-ring {
+    border-color: {{ section.settings.pin_inactive_bg }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__pin.is-active .hotspots__pin-dot {
+    background-color: {{ section.settings.pin_active_bg }};
+    color: {{ section.settings.pin_active_color }};
+    box-shadow: 0 3px 12px {{ section.settings.pin_active_bg | color_modify: 'alpha', 0.45 }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__panel-number {
+    background-color: {{ section.settings.pin_active_bg }};
+    color: {{ section.settings.pin_active_color }};
+  }
 {% endstyle %}
 
 <div class="hotspots">
@@ -109,31 +125,39 @@
       const nextPanel = infoCol.querySelector('[data-hotspot-panel="' + id + '"]');
       if (!nextPanel || id === current) return;
 
-      // Determine slide direction (left vs right based on DOM order)
+      // Slide direction based on DOM order
       const allPanels = Array.from(panels);
       const prevIdx   = prevPanel ? allPanels.indexOf(prevPanel) : -1;
       const nextIdx   = allPanels.indexOf(nextPanel);
       const dir       = (!prevPanel || nextIdx > prevIdx) ? 1 : -1;
 
-      // Slide out current panel
+      // Slide out previous panel
       if (prevPanel) {
         prevPanel.style.transform = 'translateX(' + (-dir * 100) + '%)';
         prevPanel.style.opacity   = '0';
-        prevPanel.addEventListener('transitionend', function handler() {
+        prevPanel.style.visibility = 'hidden';
+        prevPanel.addEventListener('transitionend', function handler(e) {
+          if (e.propertyName !== 'opacity') return;
+          // Suppress CSS transition snap when removing is-active
+          prevPanel.style.transition = 'none';
           prevPanel.classList.remove('is-active');
-          prevPanel.style.transform = '';
-          prevPanel.style.opacity   = '';
+          prevPanel.style.transform  = '';
+          prevPanel.style.opacity    = '';
+          prevPanel.style.visibility = '';
+          // Re-enable transition on next frame
+          requestAnimationFrame(function() { prevPanel.style.transition = ''; });
           prevPanel.removeEventListener('transitionend', handler);
         });
       }
 
-      // Slide in next panel
-      nextPanel.style.transition = 'none';
-      nextPanel.style.transform  = 'translateX(' + (dir * 100) + '%)';
-      nextPanel.style.opacity    = '0';
+      // Position next panel off-screen instantly (no transition)
+      nextPanel.style.transition  = 'none';
+      nextPanel.style.transform   = 'translateX(' + (dir * 100) + '%)';
+      nextPanel.style.opacity     = '0';
+      nextPanel.style.visibility  = 'visible';
       nextPanel.classList.add('is-active');
 
-      // Force reflow then animate in
+      // Force reflow, then animate in
       nextPanel.getBoundingClientRect();
       nextPanel.style.transition = '';
       nextPanel.style.transform  = 'translateX(0)';
@@ -227,8 +251,6 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: rgba(255,255,255,0.92);
-    color: #3d2314;
     font-size: 0.75rem;
     font-weight: 700;
     display: flex;
@@ -249,7 +271,7 @@
     margin-top: -16px;
     margin-left: -16px;
     border-radius: 50%;
-    border: 2px solid rgba(255,255,255,0.8);
+    border: 2px solid;
     opacity: 0;
     transform: scale(1);
     animation: none;
@@ -274,10 +296,7 @@
 
   /* Active pin — filled, larger, no pulse */
   .hotspots__pin.is-active .hotspots__pin-dot {
-    background-color: #3d2314;
-    color: #ffffff;
     transform: translate(-50%, -50%) scale(1.2);
-    box-shadow: 0 3px 12px rgba(61,35,20,0.5);
   }
 
   .hotspots__pin:hover:not(.is-active) .hotspots__pin-dot {
@@ -286,7 +305,7 @@
   }
 
   .hotspots__pin:focus-visible .hotspots__pin-dot {
-    outline: 2px solid #3d2314;
+    outline: 2px solid currentColor;
     outline-offset: 3px;
   }
 
@@ -295,47 +314,39 @@
     background-color: var(--color-background);
     border: 1px solid rgba(0,0,0,0.08);
     border-left: none;
-    position: relative;
-    /* Fix height so absolute panels have a reference */
-    min-height: 400px;
+    /* CSS Grid stacking: all panels share the same cell → height = tallest panel, no jumping */
+    display: grid;
     overflow: hidden;
   }
 
   /* ── Panels ── */
   .hotspots__panel {
-    /* Hidden: off to the right, invisible */
-    position: absolute;
-    inset: 0;
+    /* Stack all panels in the same grid cell */
+    grid-row: 1;
+    grid-column: 1;
     padding: 2.5rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    /* Hidden state */
     opacity: 0;
     transform: translateX(100%);
-    /* No transition by default (avoids flash on load) */
     pointer-events: none;
-    overflow-y: auto;
+    visibility: hidden;
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.38s ease;
   }
 
   .hotspots__panel.is-active {
-    position: relative;
     opacity: 1;
     transform: translateX(0);
     pointer-events: auto;
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
-  }
-
-  /* Panels that are leaving get transition too (set via JS inline style) */
-  .hotspots__panel:not(.is-active) {
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+    visibility: visible;
   }
 
   .hotspots__panel-number {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background-color: #3d2314;
-    color: #ffffff;
     font-size: 0.85rem;
     font-weight: 700;
     display: flex;
@@ -464,6 +475,34 @@
       "id": "image_bg",
       "label": "Bild-Hintergrundfarbe",
       "default": "#f0ebe4"
+    },
+    {
+      "type": "header",
+      "content": "Pin-Farben"
+    },
+    {
+      "type": "color",
+      "id": "pin_inactive_bg",
+      "label": "Inaktiv: Hintergrund",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "pin_inactive_color",
+      "label": "Inaktiv: Textfarbe",
+      "default": "#3d2314"
+    },
+    {
+      "type": "color",
+      "id": "pin_active_bg",
+      "label": "Aktiv: Hintergrund",
+      "default": "#3d2314"
+    },
+    {
+      "type": "color",
+      "id": "pin_active_color",
+      "label": "Aktiv: Textfarbe",
+      "default": "#ffffff"
     }
   ],
   "blocks": [
