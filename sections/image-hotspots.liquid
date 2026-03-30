@@ -99,18 +99,54 @@
 <script>
 (function() {
   document.querySelectorAll('.hotspots').forEach(function(container) {
-    const pins = container.querySelectorAll('[data-hotspot-pin]');
-    const panels = container.querySelectorAll('[data-hotspot-panel]');
+    const pins    = container.querySelectorAll('[data-hotspot-pin]');
+    const panels  = container.querySelectorAll('[data-hotspot-panel]');
+    const infoCol = container.querySelector('.hotspots__info-col');
+    let current   = null;
 
     function activate(id) {
+      const prevPanel = infoCol.querySelector('.hotspots__panel.is-active');
+      const nextPanel = infoCol.querySelector('[data-hotspot-panel="' + id + '"]');
+      if (!nextPanel || id === current) return;
+
+      // Determine slide direction (left vs right based on DOM order)
+      const allPanels = Array.from(panels);
+      const prevIdx   = prevPanel ? allPanels.indexOf(prevPanel) : -1;
+      const nextIdx   = allPanels.indexOf(nextPanel);
+      const dir       = (!prevPanel || nextIdx > prevIdx) ? 1 : -1;
+
+      // Slide out current panel
+      if (prevPanel) {
+        prevPanel.style.transform = 'translateX(' + (-dir * 100) + '%)';
+        prevPanel.style.opacity   = '0';
+        prevPanel.addEventListener('transitionend', function handler() {
+          prevPanel.classList.remove('is-active');
+          prevPanel.style.transform = '';
+          prevPanel.style.opacity   = '';
+          prevPanel.removeEventListener('transitionend', handler);
+        });
+      }
+
+      // Slide in next panel
+      nextPanel.style.transition = 'none';
+      nextPanel.style.transform  = 'translateX(' + (dir * 100) + '%)';
+      nextPanel.style.opacity    = '0';
+      nextPanel.classList.add('is-active');
+
+      // Force reflow then animate in
+      nextPanel.getBoundingClientRect();
+      nextPanel.style.transition = '';
+      nextPanel.style.transform  = 'translateX(0)';
+      nextPanel.style.opacity    = '1';
+
+      // Update pins
       pins.forEach(function(pin) {
         const active = pin.dataset.hotspotPin === id;
         pin.classList.toggle('is-active', active);
         pin.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-      panels.forEach(function(panel) {
-        panel.classList.toggle('is-active', panel.dataset.hotspotPanel === id);
-      });
+
+      current = id;
     }
 
     pins.forEach(function(pin) {
@@ -118,6 +154,9 @@
         activate(pin.dataset.hotspotPin);
       });
     });
+
+    // Set initial state
+    if (pins.length) current = pins[0].dataset.hotspotPin;
   });
 })();
 </script>
@@ -171,8 +210,8 @@
   .hotspots__pin {
     position: absolute;
     transform: translate(-50%, -50%);
-    width: 36px;
-    height: 36px;
+    width: 48px;
+    height: 48px;
     background: none;
     border: none;
     padding: 0;
@@ -182,42 +221,68 @@
 
   .hotspots__pin-dot {
     position: absolute;
-    inset: 50%;
+    top: 50%;
+    left: 50%;
     transform: translate(-50%, -50%);
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: var(--color-foreground);
-    color: var(--color-background);
+    background-color: rgba(255,255,255,0.92);
+    color: #3d2314;
     font-size: 0.75rem;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
     z-index: 1;
   }
 
+  /* Inactive pulse rings */
   .hotspots__pin-ring {
     position: absolute;
-    inset: 0;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    margin-top: -16px;
+    margin-left: -16px;
     border-radius: 50%;
-    border: 2px solid var(--color-foreground);
+    border: 2px solid rgba(255,255,255,0.8);
     opacity: 0;
     transform: scale(1);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: none;
   }
 
-  .hotspots__pin:hover .hotspots__pin-ring,
-  .hotspots__pin.is-active .hotspots__pin-ring {
-    opacity: 0.4;
-    transform: scale(1.6);
+  /* Only pulse on inactive pins */
+  .hotspots__pin:not(.is-active) .hotspots__pin-ring {
+    animation: hotspot-pulse 2.2s ease-out infinite;
   }
 
+  @keyframes hotspot-pulse {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    70%  { transform: scale(2.2); opacity: 0;   }
+    100% { transform: scale(2.2); opacity: 0;   }
+  }
+
+  /* Stagger pulse on multiple pins */
+  .hotspots__pin:nth-child(2):not(.is-active) .hotspots__pin-ring { animation-delay: 0.4s; }
+  .hotspots__pin:nth-child(3):not(.is-active) .hotspots__pin-ring { animation-delay: 0.8s; }
+  .hotspots__pin:nth-child(4):not(.is-active) .hotspots__pin-ring { animation-delay: 1.2s; }
+  .hotspots__pin:nth-child(5):not(.is-active) .hotspots__pin-ring { animation-delay: 1.6s; }
+
+  /* Active pin — filled, larger, no pulse */
   .hotspots__pin.is-active .hotspots__pin-dot {
     background-color: #3d2314;
     color: #ffffff;
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 3px 12px rgba(61,35,20,0.5);
+  }
+
+  .hotspots__pin:hover:not(.is-active) .hotspots__pin-dot {
     transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
   }
 
   .hotspots__pin:focus-visible .hotspots__pin-dot {
@@ -231,19 +296,38 @@
     border: 1px solid rgba(0,0,0,0.08);
     border-left: none;
     position: relative;
+    /* Fix height so absolute panels have a reference */
+    min-height: 400px;
+    overflow: hidden;
   }
 
   /* ── Panels ── */
   .hotspots__panel {
-    display: none;
+    /* Hidden: off to the right, invisible */
+    position: absolute;
+    inset: 0;
     padding: 2.5rem;
-    height: 100%;
+    display: flex;
     flex-direction: column;
     gap: 1rem;
+    opacity: 0;
+    transform: translateX(100%);
+    /* No transition by default (avoids flash on load) */
+    pointer-events: none;
+    overflow-y: auto;
   }
 
   .hotspots__panel.is-active {
-    display: flex;
+    position: relative;
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
+  }
+
+  /* Panels that are leaving get transition too (set via JS inline style) */
+  .hotspots__panel:not(.is-active) {
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s ease;
   }
 
   .hotspots__panel-number {
