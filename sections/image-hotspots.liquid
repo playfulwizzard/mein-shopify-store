@@ -1,0 +1,483 @@
+{%- assign first_block = section.blocks | first -%}
+
+{% style %}
+  #shopify-section-{{ section.id }} .hotspots__image-col {
+    background-color: {{ section.settings.image_bg }};
+  }
+{% endstyle %}
+
+<div class="hotspots">
+  {%- if section.settings.heading != blank -%}
+    <h2 class="section-heading">{{ section.settings.heading | escape }}</h2>
+  {%- endif -%}
+
+  <div class="hotspots__layout">
+
+    {%- comment -%} ── Linke Seite: Bild mit Pins ── {%- endcomment -%}
+    <div class="hotspots__image-col">
+      <div class="hotspots__image-wrapper">
+        {%- if section.settings.image != blank -%}
+          {{- section.settings.image
+            | image_url: width: 1200
+            | image_tag:
+              loading: 'lazy',
+              class: 'hotspots__image',
+              alt: section.settings.image.alt | default: section.settings.heading | escape
+          -}}
+        {%- else -%}
+          <div class="hotspots__image-placeholder">{{ 'lifestyle-1' | placeholder_svg_tag }}</div>
+        {%- endif -%}
+
+        {%- for block in section.blocks -%}
+          <button
+            class="hotspots__pin{% if forloop.first %} is-active{% endif %}"
+            style="left: {{ block.settings.position_x }}%; top: {{ block.settings.position_y }}%;"
+            data-hotspot-pin="{{ block.id }}"
+            aria-label="{{ block.settings.title | default: 'Punkt ' | append: forloop.index | escape }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            <span class="hotspots__pin-dot">{{ forloop.index }}</span>
+            <span class="hotspots__pin-ring" aria-hidden="true"></span>
+          </button>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    {%- comment -%} ── Rechte Seite: Info-Panels ── {%- endcomment -%}
+    <div class="hotspots__info-col">
+      {%- if section.blocks.size == 0 -%}
+        <p class="hotspots__empty">Füge Punkte über den Theme-Editor hinzu.</p>
+      {%- endif -%}
+
+      {%- for block in section.blocks -%}
+        <div
+          class="hotspots__panel{% if forloop.first %} is-active{% endif %}"
+          data-hotspot-panel="{{ block.id }}"
+          {{ block.shopify_attributes }}
+        >
+          <div class="hotspots__panel-number" aria-hidden="true">{{ forloop.index }}</div>
+
+          {%- if block.settings.title != blank -%}
+            <h3 class="hotspots__panel-title">{{ block.settings.title | escape }}</h3>
+          {%- endif -%}
+
+          {%- if block.settings.text != blank -%}
+            <div class="hotspots__panel-text rte">{{ block.settings.text }}</div>
+          {%- endif -%}
+
+          {%- if block.settings.product != blank -%}
+            {%- assign pin_product = all_products[block.settings.product] -%}
+            {%- if pin_product != blank -%}
+              <a class="hotspots__panel-product" href="{{ pin_product.url }}">
+                {%- if pin_product.featured_image != blank -%}
+                  {{- pin_product.featured_image
+                    | image_url: width: 120
+                    | image_tag: loading: 'lazy', alt: pin_product.title | escape
+                  -}}
+                {%- endif -%}
+                <div class="hotspots__panel-product-info">
+                  <span class="hotspots__panel-product-title">{{ pin_product.title | escape }}</span>
+                  <span class="hotspots__panel-product-price">{{ pin_product.price | money }}</span>
+                </div>
+              </a>
+            {%- endif -%}
+          {%- endif -%}
+
+          {%- if block.settings.cta_label != blank -%}
+            <a class="hotspots__panel-cta" href="{{ block.settings.cta_url | default: '#' }}">
+              {{- block.settings.cta_label | escape -}}
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  document.querySelectorAll('.hotspots').forEach(function(container) {
+    const pins = container.querySelectorAll('[data-hotspot-pin]');
+    const panels = container.querySelectorAll('[data-hotspot-panel]');
+
+    function activate(id) {
+      pins.forEach(function(pin) {
+        const active = pin.dataset.hotspotPin === id;
+        pin.classList.toggle('is-active', active);
+        pin.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      panels.forEach(function(panel) {
+        panel.classList.toggle('is-active', panel.dataset.hotspotPanel === id);
+      });
+    }
+
+    pins.forEach(function(pin) {
+      pin.addEventListener('click', function() {
+        activate(pin.dataset.hotspotPin);
+      });
+    });
+  });
+})();
+</script>
+
+{% stylesheet %}
+  .hotspots {
+    padding: 4rem 0;
+  }
+
+  /* ── Layout ── */
+  .hotspots__layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* ── Linke Spalte: Bild ── */
+  .hotspots__image-col {
+    position: relative;
+    background-color: #f0ebe4;
+  }
+
+  .hotspots__image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+
+  .hotspots__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hotspots__image-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+
+  .hotspots__image-placeholder svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Pins ── */
+  .hotspots__pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+
+  .hotspots__pin-dot {
+    position: absolute;
+    inset: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    z-index: 1;
+  }
+
+  .hotspots__pin-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid var(--color-foreground);
+    opacity: 0;
+    transform: scale(1);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  .hotspots__pin:hover .hotspots__pin-ring,
+  .hotspots__pin.is-active .hotspots__pin-ring {
+    opacity: 0.4;
+    transform: scale(1.6);
+  }
+
+  .hotspots__pin.is-active .hotspots__pin-dot {
+    background-color: #3d2314;
+    color: #ffffff;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  .hotspots__pin:focus-visible .hotspots__pin-dot {
+    outline: 2px solid #3d2314;
+    outline-offset: 3px;
+  }
+
+  /* ── Rechte Spalte: Info ── */
+  .hotspots__info-col {
+    background-color: var(--color-background);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-left: none;
+    position: relative;
+  }
+
+  /* ── Panels ── */
+  .hotspots__panel {
+    display: none;
+    padding: 2.5rem;
+    height: 100%;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .hotspots__panel.is-active {
+    display: flex;
+  }
+
+  .hotspots__panel-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #3d2314;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .hotspots__panel-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .hotspots__panel-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    opacity: 0.8;
+  }
+
+  /* Produkt-Karte */
+  .hotspots__panel-product {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    background-color: #f9f5f0;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: auto;
+  }
+
+  .hotspots__panel-product img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .hotspots__panel-product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .hotspots__panel-product-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .hotspots__panel-product-price {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+
+  .hotspots__panel-product:hover .hotspots__panel-product-title {
+    text-decoration: underline;
+  }
+
+  /* CTA-Button */
+  .hotspots__panel-cta {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.65rem 1.5rem;
+    border: 2px solid currentColor;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: var(--style-border-radius-inputs);
+    align-self: flex-start;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .hotspots__panel-cta:hover {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+  }
+
+  .hotspots__empty {
+    padding: 2rem;
+    opacity: 0.5;
+    font-size: 0.9rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hotspots__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .hotspots__info-col {
+      border-left: 1px solid rgba(0,0,0,0.08);
+      border-top: none;
+    }
+
+    .hotspots__panel {
+      padding: 1.75rem;
+    }
+
+    .hotspots__image-wrapper {
+      min-height: 300px;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Bild-Hotspots",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Überschrift"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Bild"
+    },
+    {
+      "type": "color",
+      "id": "image_bg",
+      "label": "Bild-Hintergrundfarbe",
+      "default": "#f0ebe4"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "hotspot",
+      "name": "Hotspot-Punkt",
+      "settings": [
+        {
+          "type": "header",
+          "content": "Position auf dem Bild"
+        },
+        {
+          "type": "range",
+          "id": "position_x",
+          "label": "Position horizontal",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "default": 50,
+          "unit": "%"
+        },
+        {
+          "type": "range",
+          "id": "position_y",
+          "label": "Position vertikal",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "default": 50,
+          "unit": "%"
+        },
+        {
+          "type": "header",
+          "content": "Inhalt"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Titel",
+          "default": "Punkt-Titel"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Beschreibung",
+          "default": "<p>Beschreibung zu diesem Punkt auf dem Bild.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Produkt (optional)"
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Produkt verknüpfen"
+        },
+        {
+          "type": "header",
+          "content": "Button (optional)"
+        },
+        {
+          "type": "text",
+          "id": "cta_label",
+          "label": "Button-Text"
+        },
+        {
+          "type": "url",
+          "id": "cta_url",
+          "label": "Button-Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Bild-Hotspots",
+      "category": "Bilder",
+      "blocks": [
+        {
+          "type": "hotspot",
+          "settings": {
+            "position_x": 30,
+            "position_y": 40,
+            "title": "Punkt 1",
+            "text": "<p>Beschreibung zum ersten Punkt.</p>"
+          }
+        },
+        {
+          "type": "hotspot",
+          "settings": {
+            "position_x": 65,
+            "position_y": 60,
+            "title": "Punkt 2",
+            "text": "<p>Beschreibung zum zweiten Punkt.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
