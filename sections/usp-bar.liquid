@@ -15,9 +15,10 @@
         <li class="usp-bar__item" {{ block.shopify_attributes }}>
           {%- if block.settings.icon != blank -%}
             <div class="usp-bar__icon">
+              {%- assign usp_icon_alt = block.settings.title | escape -%}
               {{- block.settings.icon
                 | image_url: width: 80
-                | image_tag: alt: block.settings.title | escape, loading: 'lazy'
+                | image_tag: alt: usp_icon_alt, loading: 'lazy'
               -}}
             </div>
           {%- endif -%}
