@@ -1,20 +1,107 @@
-/*
- * ------------------------------------------------------------
- * IMPORTANT: The contents of this file are auto-generated.
- *
- * This file may be updated by the Shopify admin theme editor
- * or related systems. Please exercise caution as any changes
- * made to this file may be overwritten.
- * ------------------------------------------------------------
- */
 {
   "sections": {
-    "main": {
-      "type": "hello-world",
-      "settings": {}
+    "hero": {
+      "type": "hero",
+      "settings": {
+        "min_height": 600,
+        "overlay_color": "#3d2314",
+        "overlay_opacity": 40,
+        "heading": "Echte Kakao-Kultur",
+        "subheading": "Handverlesene Kakaoprodukte aus nachhaltigem Anbau",
+        "content_alignment": "center",
+        "text_color": "#ffffff",
+        "cta_label": "Jetzt entdecken",
+        "cta_url": "/collections/all"
+      }
+    },
+    "usp": {
+      "type": "usp-bar",
+      "blocks": {
+        "usp-1": {
+          "type": "usp_item",
+          "settings": {
+            "title": "100% Bio",
+            "text": "Alle unsere Kakao-Produkte sind zertifiziert biologisch angebaut."
+          }
+        },
+        "usp-2": {
+          "type": "usp_item",
+          "settings": {
+            "title": "Fair Trade",
+            "text": "Direkte Partnerschaften mit Kakaobauern für faire Löhne."
+          }
+        },
+        "usp-3": {
+          "type": "usp_item",
+          "settings": {
+            "title": "Handverlesen",
+            "text": "Jede Bohne wird sorgfältig ausgewählt und verarbeitet."
+          }
+        },
+        "usp-4": {
+          "type": "usp_item",
+          "settings": {
+            "title": "Schneller Versand",
+            "text": "Lieferung in 2–3 Werktagen direkt zu dir nach Hause."
+          }
+        }
+      },
+      "block_order": ["usp-1", "usp-2", "usp-3", "usp-4"],
+      "settings": {
+        "background_color": "#f9f5f0"
+      }
+    },
+    "story": {
+      "type": "image-with-text",
+      "settings": {
+        "image_position": "left",
+        "image_ratio": "landscape",
+        "heading": "Unsere Geschichte",
+        "text": "<p>La Chocolatera wurde aus einer tiefen Leidenschaft für echten, unverfälschten Kakao geboren. Wir glauben daran, dass guter Kakao nicht nur schmeckt – er erzählt eine Geschichte von Boden, Sonne und Menschen.</p><p>Unsere Produkte kommen direkt von Kakaobauern, mit denen wir seit Jahren zusammenarbeiten. Fair, nachhaltig und mit vollem Respekt für die Natur.</p>",
+        "cta_label": "Mehr über uns",
+        "cta_url": "/pages/ueber-uns",
+        "background_color": "#ffffff"
+      }
+    },
+    "categories": {
+      "type": "collection-grid",
+      "blocks": {},
+      "block_order": [],
+      "settings": {
+        "heading": "Unsere Kategorien",
+        "columns": "3"
+      }
+    },
+    "featured": {
+      "type": "featured-products",
+      "settings": {
+        "heading": "Highlight-Produkte",
+        "products_to_show": 4,
+        "columns": "4",
+        "show_price": true,
+        "cta_label": "Alle Produkte",
+        "cta_url": "/collections/all"
+      }
+    },
+    "banner": {
+      "type": "image-banner",
+      "settings": {
+        "max_height": 400,
+        "image_position": "center center",
+        "full_width": true
+      }
+    },
+    "blog": {
+      "type": "blog-teaser",
+      "settings": {
+        "heading": "Aus unserem Blog",
+        "articles_count": 3,
+        "show_image": true,
+        "show_date": true,
+        "show_excerpt": true,
+        "cta_label": "Alle Beiträge"
+      }
     }
   },
-  "order": [
-    "main"
-  ]
+  "order": ["hero", "usp", "story", "categories", "featured", "banner", "blog"]
 }

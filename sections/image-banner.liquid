@@ -1,0 +1,138 @@
+{% style %}
+  #shopify-section-{{ section.id }} .image-banner__media {
+    max-height: {{ section.settings.max_height }}px;
+  }
+  #shopify-section-{{ section.id }} .image-banner__media img {
+    object-position: {{ section.settings.image_position }};
+  }
+{% endstyle %}
+
+{%- liquid
+  if section.settings.url != blank
+    assign tag = 'a'
+    assign tag_attrs = 'href="' | append: section.settings.url | append: '"'
+  else
+    assign tag = 'div'
+    assign tag_attrs = ''
+  endif
+-%}
+
+<{{ tag }}
+  class="image-banner{% if section.settings.full_width %} full-width{% endif %}"
+  {% if tag_attrs != '' %}{{ tag_attrs }}{% endif %}
+>
+  {%- if section.settings.image != blank -%}
+    <div class="image-banner__media">
+      {{- section.settings.image
+        | image_url: width: 2000
+        | image_tag:
+          loading: 'lazy',
+          alt: section.settings.image.alt | default: section.settings.caption | escape
+      -}}
+    </div>
+  {%- else -%}
+    <div class="image-banner__media image-banner__media--placeholder">
+      {{ 'lifestyle-2' | placeholder_svg_tag }}
+    </div>
+  {%- endif -%}
+
+  {%- if section.settings.caption != blank -%}
+    <p class="image-banner__caption">{{ section.settings.caption | escape }}</p>
+  {%- endif -%}
+</{{ tag }}>
+
+{% stylesheet %}
+  .image-banner {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .image-banner__media {
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .image-banner__media img,
+  .image-banner__media svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.4s ease;
+  }
+
+  a.image-banner:hover .image-banner__media img {
+    transform: scale(1.02);
+  }
+
+  .image-banner__media--placeholder {
+    background-color: #f0ebe4;
+    aspect-ratio: 16 / 5;
+  }
+
+  .image-banner__caption {
+    text-align: center;
+    font-size: 0.85rem;
+    opacity: 0.6;
+    margin-top: 0.75rem;
+    padding: 0 1rem;
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Bild-Banner",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Bild"
+    },
+    {
+      "type": "range",
+      "id": "max_height",
+      "label": "Maximale Höhe",
+      "min": 200,
+      "max": 600,
+      "step": 20,
+      "default": 400,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Bildausschnitt",
+      "options": [
+        { "value": "top center", "label": "Oben" },
+        { "value": "center center", "label": "Mitte" },
+        { "value": "bottom center", "label": "Unten" }
+      ],
+      "default": "center center"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width",
+      "label": "Volle Breite",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "caption",
+      "label": "Bildunterschrift (optional)"
+    },
+    {
+      "type": "url",
+      "id": "url",
+      "label": "Link (optional)"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Bild-Banner",
+      "category": "Bilder"
+    }
+  ]
+}
+{% endschema %}

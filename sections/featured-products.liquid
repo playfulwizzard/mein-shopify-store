@@ -1,0 +1,225 @@
+{% style %}
+  #shopify-section-{{ section.id }} .featured-products__grid {
+    grid-template-columns: repeat({{ section.settings.columns }}, 1fr);
+  }
+{% endstyle %}
+
+{%- assign featured_collection = collections[section.settings.collection] -%}
+
+<div class="featured-products">
+  {%- if section.settings.heading != blank -%}
+    <h2 class="section-heading">{{ section.settings.heading | escape }}</h2>
+  {%- endif -%}
+
+  {%- if featured_collection != blank and featured_collection.products_count > 0 -%}
+    <ul class="featured-products__grid" role="list">
+      {%- for product in featured_collection.products limit: section.settings.products_to_show -%}
+        <li class="featured-products__item">
+          <a class="featured-products__link" href="{{ product.url }}">
+            <div class="featured-products__media">
+              {%- if product.featured_image != blank -%}
+                {{- product.featured_image
+                  | image_url: width: 600
+                  | image_tag:
+                    loading: 'lazy',
+                    alt: product.featured_image.alt | default: product.title | escape
+                -}}
+              {%- else -%}
+                {{ 'product-1' | placeholder_svg_tag }}
+              {%- endif -%}
+            </div>
+            <div class="featured-products__info">
+              <h3 class="featured-products__title">{{ product.title | escape }}</h3>
+              {%- if section.settings.show_price -%}
+                <p class="featured-products__price">
+                  {%- if product.compare_at_price > product.price -%}
+                    <span class="featured-products__price--compare">{{ product.compare_at_price | money }}</span>
+                  {%- endif -%}
+                  <span>{{ product.price | money }}</span>
+                </p>
+              {%- endif -%}
+            </div>
+          </a>
+        </li>
+      {%- endfor -%}
+    </ul>
+  {%- else -%}
+    <p class="featured-products__empty">Noch keine Produkte vorhanden.</p>
+  {%- endif -%}
+
+  {%- if section.settings.cta_label != blank -%}
+    <div class="featured-products__footer">
+      <a class="featured-products__cta" href="{{ section.settings.cta_url | default: featured_collection.url | default: '#' }}">
+        {{- section.settings.cta_label | escape -}}
+      </a>
+    </div>
+  {%- endif -%}
+</div>
+
+{% stylesheet %}
+  .featured-products {
+    padding: 4rem 0;
+  }
+
+  .featured-products__grid {
+    display: grid;
+    gap: 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .featured-products__link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .featured-products__media {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 4px;
+    background-color: #f9f5f0;
+  }
+
+  .featured-products__media img,
+  .featured-products__media svg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .featured-products__link:hover .featured-products__media img {
+    transform: scale(1.03);
+  }
+
+  .featured-products__info {
+    padding: 0.875rem 0 0;
+  }
+
+  .featured-products__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.35rem;
+    line-height: 1.4;
+  }
+
+  .featured-products__price {
+    font-size: 0.95rem;
+    margin: 0;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .featured-products__price--compare {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+
+  .featured-products__footer {
+    text-align: center;
+    margin-top: 2.5rem;
+  }
+
+  .featured-products__cta {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    border: 2px solid currentColor;
+    text-decoration: none;
+    font-weight: 600;
+    border-radius: var(--style-border-radius-inputs);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .featured-products__cta:hover {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+  }
+
+  .featured-products__empty {
+    opacity: 0.6;
+    text-align: center;
+    padding: 2rem 0;
+  }
+
+  @media (max-width: 768px) {
+    .featured-products__grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .featured-products__grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Highlight-Produkte",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Überschrift",
+      "default": "Highlight-Produkte"
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Kollektion"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "label": "Anzahl Produkte",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "columns",
+      "label": "Spalten",
+      "options": [
+        { "value": "2", "label": "2" },
+        { "value": "3", "label": "3" },
+        { "value": "4", "label": "4" }
+      ],
+      "default": "4"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_price",
+      "label": "Preis anzeigen",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "text",
+      "id": "cta_label",
+      "label": "Button-Text",
+      "info": "Leer lassen um den Button auszublenden"
+    },
+    {
+      "type": "url",
+      "id": "cta_url",
+      "label": "Button-Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Highlight-Produkte",
+      "category": "Startseite"
+    }
+  ]
+}
+{% endschema %}

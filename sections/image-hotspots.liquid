@@ -1,0 +1,604 @@
+{% style %}
+  #shopify-section-{{ section.id }} .hotspots__image-col {
+    background-color: {{ section.settings.image_bg }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__pin-dot {
+    background-color: {{ section.settings.pin_inactive_bg }};
+    color: {{ section.settings.pin_inactive_color }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__pin-ring {
+    border-color: {{ section.settings.pin_inactive_bg }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__pin.is-active .hotspots__pin-dot {
+    background-color: {{ section.settings.pin_active_bg }};
+    color: {{ section.settings.pin_active_color }};
+    box-shadow: 0 3px 12px {{ section.settings.pin_active_bg | color_modify: 'alpha', 0.45 }};
+  }
+  #shopify-section-{{ section.id }} .hotspots__panel-number {
+    background-color: {{ section.settings.pin_active_bg }};
+    color: {{ section.settings.pin_active_color }};
+  }
+{% endstyle %}
+
+<div class="hotspots">
+  {%- if section.settings.heading != blank -%}
+    <h2 class="section-heading">{{ section.settings.heading | escape }}</h2>
+  {%- endif -%}
+
+  <div class="hotspots__layout">
+
+    {%- comment -%} ── Linke Seite: Bild mit Pins ── {%- endcomment -%}
+    <div class="hotspots__image-col">
+      <div class="hotspots__image-wrapper">
+        {%- if section.settings.image != blank -%}
+          {{- section.settings.image
+            | image_url: width: 1200
+            | image_tag:
+              loading: 'lazy',
+              class: 'hotspots__image',
+              alt: section.settings.image.alt | default: section.settings.heading | escape
+          -}}
+        {%- else -%}
+          <div class="hotspots__image-placeholder">{{ 'lifestyle-1' | placeholder_svg_tag }}</div>
+        {%- endif -%}
+
+        {%- for block in section.blocks -%}
+          <button
+            class="hotspots__pin{% if forloop.first %} is-active{% endif %}"
+            style="left: {{ block.settings.position_x }}%; top: {{ block.settings.position_y }}%;"
+            data-hotspot-pin="{{ block.id }}"
+            aria-label="{{ block.settings.title | default: 'Punkt ' | append: forloop.index | escape }}"
+            aria-pressed="{% if forloop.first %}true{% else %}false{% endif %}"
+            {{ block.shopify_attributes }}
+          >
+            <span class="hotspots__pin-dot">{{ forloop.index }}</span>
+            <span class="hotspots__pin-ring" aria-hidden="true"></span>
+          </button>
+        {%- endfor -%}
+      </div>
+    </div>
+
+    {%- comment -%} ── Rechte Seite: Info-Panels ── {%- endcomment -%}
+    <div class="hotspots__info-col">
+      {%- if section.blocks.size == 0 -%}
+        <p class="hotspots__empty">Füge Punkte über den Theme-Editor hinzu.</p>
+      {%- endif -%}
+
+      {%- for block in section.blocks -%}
+        <div
+          class="hotspots__panel{% if forloop.first %} is-active{% endif %}"
+          data-hotspot-panel="{{ block.id }}"
+          {{ block.shopify_attributes }}
+        >
+          <div class="hotspots__panel-number" aria-hidden="true">{{ forloop.index }}</div>
+
+          {%- if block.settings.title != blank -%}
+            <h3 class="hotspots__panel-title">{{ block.settings.title | escape }}</h3>
+          {%- endif -%}
+
+          {%- if block.settings.text != blank -%}
+            <div class="hotspots__panel-text rte">{{ block.settings.text }}</div>
+          {%- endif -%}
+
+          {%- if block.settings.product != blank -%}
+            {%- assign pin_product = all_products[block.settings.product] -%}
+            {%- if pin_product != blank -%}
+              <a class="hotspots__panel-product" href="{{ pin_product.url }}">
+                {%- if pin_product.featured_image != blank -%}
+                  {{- pin_product.featured_image
+                    | image_url: width: 120
+                    | image_tag: loading: 'lazy', alt: pin_product.title | escape
+                  -}}
+                {%- endif -%}
+                <div class="hotspots__panel-product-info">
+                  <span class="hotspots__panel-product-title">{{ pin_product.title | escape }}</span>
+                  <span class="hotspots__panel-product-price">{{ pin_product.price | money }}</span>
+                </div>
+              </a>
+            {%- endif -%}
+          {%- endif -%}
+
+          {%- if block.settings.cta_label != blank -%}
+            <a class="hotspots__panel-cta" href="{{ block.settings.cta_url | default: '#' }}">
+              {{- block.settings.cta_label | escape -}}
+            </a>
+          {%- endif -%}
+        </div>
+      {%- endfor -%}
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  document.querySelectorAll('.hotspots').forEach(function(container) {
+    const pins    = container.querySelectorAll('[data-hotspot-pin]');
+    const panels  = container.querySelectorAll('[data-hotspot-panel]');
+    const infoCol = container.querySelector('.hotspots__info-col');
+    let current   = null;
+
+    function activate(id) {
+      const prevPanel = infoCol.querySelector('.hotspots__panel.is-active');
+      const nextPanel = infoCol.querySelector('[data-hotspot-panel="' + id + '"]');
+      if (!nextPanel || id === current) return;
+
+      // Slide direction based on DOM order
+      const allPanels = Array.from(panels);
+      const prevIdx   = prevPanel ? allPanels.indexOf(prevPanel) : -1;
+      const nextIdx   = allPanels.indexOf(nextPanel);
+      const dir       = (!prevPanel || nextIdx > prevIdx) ? 1 : -1;
+
+      // Slide out previous panel
+      if (prevPanel) {
+        prevPanel.style.transform = 'translateX(' + (-dir * 100) + '%)';
+        prevPanel.style.opacity   = '0';
+        prevPanel.style.visibility = 'hidden';
+        prevPanel.addEventListener('transitionend', function handler(e) {
+          if (e.propertyName !== 'opacity') return;
+          // Suppress CSS transition snap when removing is-active
+          prevPanel.style.transition = 'none';
+          prevPanel.classList.remove('is-active');
+          prevPanel.style.transform  = '';
+          prevPanel.style.opacity    = '';
+          prevPanel.style.visibility = '';
+          // Re-enable transition on next frame
+          requestAnimationFrame(function() { prevPanel.style.transition = ''; });
+          prevPanel.removeEventListener('transitionend', handler);
+        });
+      }
+
+      // Position next panel off-screen instantly (no transition)
+      nextPanel.style.transition  = 'none';
+      nextPanel.style.transform   = 'translateX(' + (dir * 100) + '%)';
+      nextPanel.style.opacity     = '0';
+      nextPanel.style.visibility  = 'visible';
+      nextPanel.classList.add('is-active');
+
+      // Force reflow, then animate in
+      nextPanel.getBoundingClientRect();
+      nextPanel.style.transition = '';
+      nextPanel.style.transform  = 'translateX(0)';
+      nextPanel.style.opacity    = '1';
+
+      // Update pins
+      pins.forEach(function(pin) {
+        const active = pin.dataset.hotspotPin === id;
+        pin.classList.toggle('is-active', active);
+        pin.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+
+      current = id;
+    }
+
+    pins.forEach(function(pin) {
+      pin.addEventListener('click', function() {
+        activate(pin.dataset.hotspotPin);
+      });
+    });
+
+    // Set initial state
+    if (pins.length) current = pins[0].dataset.hotspotPin;
+  });
+})();
+</script>
+
+{% stylesheet %}
+  .hotspots {
+    padding: 4rem 0;
+  }
+
+  /* ── Layout ── */
+  .hotspots__layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* ── Linke Spalte: Bild ── */
+  .hotspots__image-col {
+    position: relative;
+    background-color: #f0ebe4;
+  }
+
+  .hotspots__image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+
+  .hotspots__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .hotspots__image-placeholder {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+  }
+
+  .hotspots__image-placeholder svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Pins ── */
+  .hotspots__pin {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    z-index: 2;
+  }
+
+  .hotspots__pin-dot {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+    z-index: 1;
+  }
+
+  /* Inactive pulse rings */
+  .hotspots__pin-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    margin-top: -16px;
+    margin-left: -16px;
+    border-radius: 50%;
+    border: 2px solid;
+    opacity: 0;
+    transform: scale(1);
+    animation: none;
+  }
+
+  /* Only pulse on inactive pins */
+  .hotspots__pin:not(.is-active) .hotspots__pin-ring {
+    animation: hotspot-pulse 2.2s ease-out infinite;
+  }
+
+  @keyframes hotspot-pulse {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    70%  { transform: scale(2.2); opacity: 0;   }
+    100% { transform: scale(2.2); opacity: 0;   }
+  }
+
+  /* Stagger pulse on multiple pins */
+  .hotspots__pin:nth-child(2):not(.is-active) .hotspots__pin-ring { animation-delay: 0.4s; }
+  .hotspots__pin:nth-child(3):not(.is-active) .hotspots__pin-ring { animation-delay: 0.8s; }
+  .hotspots__pin:nth-child(4):not(.is-active) .hotspots__pin-ring { animation-delay: 1.2s; }
+  .hotspots__pin:nth-child(5):not(.is-active) .hotspots__pin-ring { animation-delay: 1.6s; }
+
+  /* Active pin — filled, larger, no pulse */
+  .hotspots__pin.is-active .hotspots__pin-dot {
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+
+  .hotspots__pin:hover:not(.is-active) .hotspots__pin-dot {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+  }
+
+  .hotspots__pin:focus-visible .hotspots__pin-dot {
+    outline: 2px solid currentColor;
+    outline-offset: 3px;
+  }
+
+  /* ── Rechte Spalte: Info ── */
+  .hotspots__info-col {
+    background-color: var(--color-background);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-left: none;
+    /* CSS Grid stacking: all panels share the same cell → height = tallest panel, no jumping */
+    display: grid;
+    overflow: hidden;
+  }
+
+  /* ── Panels ── */
+  .hotspots__panel {
+    /* Stack all panels in the same grid cell */
+    grid-row: 1;
+    grid-column: 1;
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    /* Hidden state */
+    opacity: 0;
+    transform: translateX(100%);
+    pointer-events: none;
+    visibility: hidden;
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.38s ease;
+  }
+
+  .hotspots__panel.is-active {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .hotspots__panel-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .hotspots__panel-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .hotspots__panel-text {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    opacity: 0.8;
+  }
+
+  /* Produkt-Karte */
+  .hotspots__panel-product {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    background-color: #f9f5f0;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: auto;
+  }
+
+  .hotspots__panel-product img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .hotspots__panel-product-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .hotspots__panel-product-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .hotspots__panel-product-price {
+    font-size: 0.85rem;
+    opacity: 0.7;
+  }
+
+  .hotspots__panel-product:hover .hotspots__panel-product-title {
+    text-decoration: underline;
+  }
+
+  /* CTA-Button */
+  .hotspots__panel-cta {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.65rem 1.5rem;
+    border: 2px solid currentColor;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: var(--style-border-radius-inputs);
+    align-self: flex-start;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .hotspots__panel-cta:hover {
+    background-color: var(--color-foreground);
+    color: var(--color-background);
+  }
+
+  .hotspots__empty {
+    padding: 2rem;
+    opacity: 0.5;
+    font-size: 0.9rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hotspots__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .hotspots__info-col {
+      border-left: 1px solid rgba(0,0,0,0.08);
+      border-top: none;
+    }
+
+    .hotspots__panel {
+      padding: 1.75rem;
+    }
+
+    .hotspots__image-wrapper {
+      min-height: 300px;
+    }
+  }
+{% endstylesheet %}
+
+{% schema %}
+{
+  "name": "Bild-Hotspots",
+  "tag": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Überschrift"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Bild"
+    },
+    {
+      "type": "color",
+      "id": "image_bg",
+      "label": "Bild-Hintergrundfarbe",
+      "default": "#f0ebe4"
+    },
+    {
+      "type": "header",
+      "content": "Pin-Farben"
+    },
+    {
+      "type": "color",
+      "id": "pin_inactive_bg",
+      "label": "Inaktiv: Hintergrund",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "pin_inactive_color",
+      "label": "Inaktiv: Textfarbe",
+      "default": "#3d2314"
+    },
+    {
+      "type": "color",
+      "id": "pin_active_bg",
+      "label": "Aktiv: Hintergrund",
+      "default": "#3d2314"
+    },
+    {
+      "type": "color",
+      "id": "pin_active_color",
+      "label": "Aktiv: Textfarbe",
+      "default": "#ffffff"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "hotspot",
+      "name": "Hotspot-Punkt",
+      "settings": [
+        {
+          "type": "header",
+          "content": "Position auf dem Bild"
+        },
+        {
+          "type": "range",
+          "id": "position_x",
+          "label": "Position horizontal",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "default": 50,
+          "unit": "%"
+        },
+        {
+          "type": "range",
+          "id": "position_y",
+          "label": "Position vertikal",
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "default": 50,
+          "unit": "%"
+        },
+        {
+          "type": "header",
+          "content": "Inhalt"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Titel",
+          "default": "Punkt-Titel"
+        },
+        {
+          "type": "richtext",
+          "id": "text",
+          "label": "Beschreibung",
+          "default": "<p>Beschreibung zu diesem Punkt auf dem Bild.</p>"
+        },
+        {
+          "type": "header",
+          "content": "Produkt (optional)"
+        },
+        {
+          "type": "product",
+          "id": "product",
+          "label": "Produkt verknüpfen"
+        },
+        {
+          "type": "header",
+          "content": "Button (optional)"
+        },
+        {
+          "type": "text",
+          "id": "cta_label",
+          "label": "Button-Text"
+        },
+        {
+          "type": "url",
+          "id": "cta_url",
+          "label": "Button-Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Bild-Hotspots",
+      "category": "Bilder",
+      "blocks": [
+        {
+          "type": "hotspot",
+          "settings": {
+            "position_x": 30,
+            "position_y": 40,
+            "title": "Punkt 1",
+            "text": "<p>Beschreibung zum ersten Punkt.</p>"
+          }
+        },
+        {
+          "type": "hotspot",
+          "settings": {
+            "position_x": 65,
+            "position_y": 60,
+            "title": "Punkt 2",
+            "text": "<p>Beschreibung zum zweiten Punkt.</p>"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
